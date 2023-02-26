@@ -43,30 +43,38 @@ public static class PlayerPrefsUtility
     /// </summary>
     /// <param name="profileName"></param>
     /// <returns>String Json</returns>
-    public static string Load(string profileName)
-    {   
-        string metadata = PlayerPrefs.GetString(profileName); // Load metadata by profileName
+    public static string Load(string profileName, bool fromPlayerData = false)
+    {
         
-        if (string.IsNullOrEmpty(metadata)) return "";
-        
-        metadata = GetDataDecrypt(metadata);
-
-        string[] keys = metadata.Split(";");//Get all key in metadata
-
-        string output = "{\n";
-
-        //Store data from keys in metadata
-        for (int i = 0; i < keys.Length - 1; i++)
+        if (fromPlayerData)
         {
-            string value = PlayerPrefs.GetString(keys[i], "");
-
-            string symbol = (i == (keys.Length - 2)) ? "" : ",";
-            
-            output += "\"" + GetTitle(GetDataDecrypt(keys[i])) + "\"" + " : " + "\"" + GetDataDecrypt(value) + "\"" + symbol + "\n";
+            return PlayerData.Load(profileName);
         }
-        output += "}";
+        else
+        {
+            string metadata = PlayerPrefs.GetString(profileName); // Load metadata by profileName
 
-        return output;
+            if (string.IsNullOrEmpty(metadata)) return "";
+
+            metadata = GetDataDecrypt(metadata);
+
+            string[] keys = metadata.Split(";");//Get all key in metadata
+
+            string output = "{\n";
+
+            //Store data from keys in metadata
+            for (int i = 0; i < keys.Length - 1; i++)
+            {
+                string value = PlayerPrefs.GetString(keys[i], "");
+
+                string symbol = (i == (keys.Length - 2)) ? "" : ",";
+
+                output += "\"" + GetTitle(GetDataDecrypt(keys[i])) + "\"" + " : " + "\"" + GetDataDecrypt(value) + "\"" + symbol + "\n";
+            }
+            output += "}";
+
+            return output;
+        }
     }
 
     //Splite cipher text to get the real title
