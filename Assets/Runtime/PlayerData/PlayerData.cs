@@ -6,19 +6,20 @@ using System.Text;
 using Newtonsoft.Json;
 using UnityEngine;
 
-using static AESEncryption;
-
 public class PlayerData
 {
     private const string FOLDER_NAME = "";
+
+    //local store profile loaded
+    private static Dictionary<string, string> _localStoreData = new Dictionary<string, string>();
 
     public static bool Save(string jsonData, string profileName)
     {
         string path = GetFilePath(profileName, FOLDER_NAME);
 
         //Encrypt data
-        AESEncryptedText aes = AESEncryption.Encrypt(jsonData, AESEncryption.PASSWORD);
-        jsonData = aes.EncryptedText + IV_SYMBOL + aes.IV;
+        AESEncryption.AESEncryptedText aes = AESEncryption.Encrypt(jsonData, AESEncryption.PASSWORD);
+        jsonData = aes.EncryptedText + AESEncryption.IV_SYMBOL + aes.IV;
 
         Byte[] byteData = Encoding.ASCII.GetBytes(jsonData);
         
@@ -39,8 +40,20 @@ public class PlayerData
         return true;
     }
 
+    //Save by local store data
+    public static bool Save(string profileName)
+    {
+        if (!_localStoreData.ContainsKey(profileName)) return false;
+
+        Save(_localStoreData[profileName], profileName);
+
+        return true;
+    }
+
     public static string Load(string profileName)
     {
+        if (_localStoreData.ContainsKey(profileName)) return _localStoreData[profileName];
+
         string path = GetFilePath(profileName, FOLDER_NAME);
 
         if (!Directory.Exists(Path.GetDirectoryName(path)))
@@ -69,9 +82,11 @@ public class PlayerData
 
         // convert the byte array to json
         string jsonData = Encoding.ASCII.GetString(jsonDataAsBytes);
-        string[] decrypt = jsonData.Split(IV_SYMBOL);
+        string[] decrypt = jsonData.Split(AESEncryption.IV_SYMBOL);
 
         string decryptJsonData = AESEncryption.Decrypt(decrypt[0], decrypt[1], AESEncryption.PASSWORD);
+
+        _localStoreData.Add(profileName, decryptJsonData);
 
         Debug.Log("Json Data: \n" + decryptJsonData);
         return decryptJsonData;
@@ -81,6 +96,8 @@ public class PlayerData
     {
         string path = GetFilePath(profileName, FOLDER_NAME);
         File.Delete(path);
+
+        _localStoreData.Remove(profileName);
     }
 
     public static void DeleteKey(string key, string profileName)
@@ -94,8 +111,13 @@ public class PlayerData
         if (!data.Keys.Contains(key)) return;
 
         data.Remove(key);
+        if (data.Keys.Count == 0)
+        {
+            DeleteAll(profileName);
+            return;
+        }
 
-        Save(JsonConvert.SerializeObject(data), profileName);
+        _localStoreData[profileName] = JsonConvert.SerializeObject(data);
     }
 
     public static bool HasKey(string key, string profileName)
@@ -148,7 +170,10 @@ public class PlayerData
             Debug.LogWarning("Invalid Profile Name!");
             return;
         }
+        if (_localStoreData.ContainsKey(profileName))
+        {
 
+        }
         string jsonData = Load(profileName);
 
         Dictionary<string, object> data;
@@ -158,6 +183,7 @@ public class PlayerData
             //create new profile
             data = new Dictionary<string, object>();
             data.Add(key, value);
+            _localStoreData.Add(profileName, JsonConvert.SerializeObject(data));
         }
         else
         {
@@ -171,9 +197,9 @@ public class PlayerData
             {
                 data[key] = value;//update
             };
-        }
 
-        Save(JsonConvert.SerializeObject(data), profileName);
+            _localStoreData[profileName] = JsonConvert.SerializeObject(data);
+        }
     }
 
     private static string GetValue(string key, string profileName, object defaultValueReturn)
@@ -189,12 +215,6 @@ public class PlayerData
         return data[key];
     }
 
-    /// <summary>
-    /// Create file path for where a file is stored on the specific platform given a folder name and file name
-    /// </summary>
-    /// <param name="FileName"></param>
-    /// <param name="FolderName"></param>
-    /// <returns></returns>
     private static string GetFilePath(string FileName = "user", string FolderName = "")
     { 
         string path = Path.Combine(Application.persistentDataPath, FolderName);
