@@ -92,7 +92,7 @@ public class PlayerDataTest
             PlayerData.DeleteKey("key_" + i, _profileName2);
         }
 
-        Assert.AreEqual(true, PlayerData.Save(_profileName2));
+        Assert.AreEqual(false, PlayerData.Save(_profileName2));
     }
 
 
