@@ -6,19 +6,21 @@ using System.Text;
 using Newtonsoft.Json;
 using UnityEngine;
 
-public class PlayerData : MonoBehaviour
+using static AESEncryption;
+
+public class PlayerData
 {
     private const string FOLDER_NAME = "";
 
-    /// <summary>
-    /// Save user-profile
-    /// </summary>
-    /// <returns></returns>
     public static bool Save(string jsonData, string profileName)
     {
         string path = GetFilePath(profileName, FOLDER_NAME);
 
-        Byte[] byteData = Encoding.ASCII.GetBytes(@jsonData);
+        //Encrypt data
+        AESEncryptedText aes = AESEncryption.Encrypt(jsonData, AESEncryption.PASSWORD);
+        jsonData = aes.EncryptedText + IV_SYMBOL + aes.IV;
+
+        Byte[] byteData = Encoding.ASCII.GetBytes(jsonData);
         
         // attempt to save here data
         try
@@ -67,35 +69,124 @@ public class PlayerData : MonoBehaviour
 
         // convert the byte array to json
         string jsonData = Encoding.ASCII.GetString(jsonDataAsBytes);
-        Debug.Log("Json Data: \n" + jsonData);
-        return jsonData;
+        string[] decrypt = jsonData.Split(IV_SYMBOL);
+
+        string decryptJsonData = AESEncryption.Decrypt(decrypt[0], decrypt[1], AESEncryption.PASSWORD);
+
+        Debug.Log("Json Data: \n" + decryptJsonData);
+        return decryptJsonData;
     }
 
-    public static string GetString(string key, string profileName)
+    public static void DeleteAll(string profileName)
     {
-        if (string.IsNullOrEmpty(key) || string.IsNullOrWhiteSpace(key))
-        {
-            Debug.LogWarning("Invalid key!");
-            return "";
-        }
-        string jsonData = Load(profileName);
-
-        var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonData);
-
-        return (string)data[key];
+        string path = GetFilePath(profileName, FOLDER_NAME);
+        File.Delete(path);
     }
 
-    public static bool SetString(string key, string value, string profileName)
+    public static void DeleteKey(string key, string profileName)
     {
         string jsonData = Load(profileName);
 
+        if (string.IsNullOrEmpty(jsonData)) return;
+
         var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonData);
 
-        data[key] = value;
+        if (!data.Keys.Contains(key)) return;
+
+        data.Remove(key);
 
         Save(JsonConvert.SerializeObject(data), profileName);
+    }
+
+    public static bool HasKey(string key, string profileName)
+    {
+        string jsonData = Load(profileName);
+
+        if (string.IsNullOrEmpty(jsonData)) return false;
+
+        var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonData);
+
+        if (!data.Keys.Contains(key)) return false;
 
         return true;
+    }
+
+    public static float GetFloat(string key, string profileName, float defaultValueReturn = 0f)
+    {
+        return float.Parse(GetValue(key, profileName, defaultValueReturn));
+    }
+
+    public static void SetFloat(string key, float value, string profileName)
+    {
+        SetValue(key, value, profileName);
+    }
+
+    public static int GetInt(string key, string profileName, int defaultValueReturn = 0)
+    {
+        return int.Parse(GetValue(key, profileName, defaultValueReturn));
+    }
+
+    public static void SetInt(string key, int value, string profileName)
+    {
+        SetValue(key, value, profileName);
+    }
+
+    public static string GetString(string key, string profileName, string defaultValueReturn = "")
+    {
+        return GetValue(key, profileName, defaultValueReturn);
+    }
+
+    public static void SetString(string key, string value, string profileName)
+    {
+        SetValue(key, value, profileName);
+    }
+
+    private static void SetValue(string key, object value, string profileName)
+    {
+        if (string.IsNullOrEmpty(profileName) || string.IsNullOrWhiteSpace(profileName))
+        {
+            Debug.LogWarning("Invalid Profile Name!");
+            return;
+        }
+
+        string jsonData = Load(profileName);
+
+        Dictionary<string, object> data;
+
+        if (string.IsNullOrEmpty(jsonData))
+        {
+            //create new profile
+            data = new Dictionary<string, object>();
+            data.Add(key, value);
+        }
+        else
+        {
+            data = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonData);
+
+            if (!data.Keys.Contains(key))
+            {
+                data.Add(key, value);//new
+            }
+            else
+            {
+                data[key] = value;//update
+            };
+        }
+
+        Save(JsonConvert.SerializeObject(data), profileName);
+    }
+
+    private static string GetValue(string key, string profileName, object defaultValueReturn)
+    {
+        string jsonData = Load(profileName);
+
+        if (string.IsNullOrEmpty(jsonData)) return defaultValueReturn.ToString();
+
+        var data = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonData);
+
+        if (!data.Keys.Contains(key)) return defaultValueReturn.ToString();
+
+        return data[key];
     }
 
     /// <summary>
@@ -104,10 +195,10 @@ public class PlayerData : MonoBehaviour
     /// <param name="FileName"></param>
     /// <param name="FolderName"></param>
     /// <returns></returns>
-    private static string GetFilePath(string FileName = "user.dat", string FolderName = "")
+    private static string GetFilePath(string FileName = "user", string FolderName = "")
     { 
         string path = Path.Combine(Application.persistentDataPath, FolderName);
-        path = Path.Combine(path, FileName);
+        path = Path.Combine(path, FileName + ".dat");
 
         //Create Directory if it does not exist
         if (!Directory.Exists(Path.GetDirectoryName(path)))
@@ -116,30 +207,5 @@ public class PlayerData : MonoBehaviour
         }
 
         return path;
-    }
-
-    private static string GetValueByKey(string key, string jsonData)
-    {
-        jsonData = jsonData.Replace("{", "").Replace("}", ""); // remove {, }
-
-        string[] records = jsonData.Split(",");
-        
-        for (int i = 0; i < records.Length; i++)
-        {
-            string[] valueData = records[i].Split("\"" + key + "\"");
-            int splitPosition = records[i].IndexOf(":");
-            if (splitPosition > 0)
-            {
-                string k = records[i].Substring(0, splitPosition).Trim();
-
-                if (k.Replace("\"", "") == key)
-                {
-                    string v = records[i].Substring(splitPosition + 1);
-                    return v.Replace("\"", "").Trim();
-                }
-            }
-        }
-
-        return "";
     }
 }

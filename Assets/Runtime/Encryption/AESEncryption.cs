@@ -6,6 +6,7 @@ using Base62;
 public static class AESEncryption
 {
     public const string PASSWORD = "EJHDSAKBNL";
+    public const string IV_SYMBOL = "_IV_";
 
     /// <summary>
     /// A class containing AES-encrypted text, plus the IV value required to decrypt it (with the correct password)

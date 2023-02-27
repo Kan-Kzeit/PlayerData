@@ -7,35 +7,41 @@ using static AESEncryption;
 public static class PlayerPrefsUtility
 {
     private const string SIGNATURE = "-CUTSTRING-";
-    private const string IV_SYMBOL = "_IV_";
 
     /// <summary>
     /// Save data json to PlayerPrefs
     /// </summary>
     /// <param name="jsonData"></param>
     /// <param name="profileName"></param>
-    public static void Save(string jsonData, string profileName)
+    public static void Save(string jsonData, string profileName, bool toPlayerData = false)
     {
-        Dictionary<string, string> data = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonData);
-        
-        string storeAllKey = "";
-
-        foreach (var key in data.Keys)
+        if (toPlayerData)
         {
-            // check if the value is not null or empty.
-            if (data[key] != null)
-            {
-                string cipherFullkey = GetDataEncrypt(GetFullKey(profileName, key));
-
-                PlayerPrefs.SetString(cipherFullkey, GetDataEncrypt(data[key]));
-
-                storeAllKey += cipherFullkey + ";";
-            }
+            PlayerData.Save(jsonData, profileName);
         }
+        else
+        {
+            Dictionary<string, string> data = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonData);
 
-        PlayerPrefs.SetString(profileName, GetDataEncrypt(storeAllKey)); //Store metadata
+            string storeAllKey = "";
 
-        PlayerPrefs.Save();
+            foreach (var key in data.Keys)
+            {
+                // check if the value is not null or empty.
+                if (data[key] != null)
+                {
+                    string cipherFullkey = GetDataEncrypt(GetFullKey(profileName, key));
+
+                    PlayerPrefs.SetString(cipherFullkey, GetDataEncrypt(data[key]));
+
+                    storeAllKey += cipherFullkey + ";";
+                }
+            }
+
+            PlayerPrefs.SetString(profileName, GetDataEncrypt(storeAllKey)); //Store metadata
+
+            PlayerPrefs.Save();
+        }
     }
 
     /// <summary>
@@ -89,14 +95,14 @@ public static class PlayerPrefsUtility
     {
         AESEncryptedText cipherFullkey = AESEncryption.Encrypt(data, AESEncryption.PASSWORD);
 
-        return cipherFullkey.EncryptedText + IV_SYMBOL + cipherFullkey.IV;
+        return cipherFullkey.EncryptedText + AESEncryption.IV_SYMBOL + cipherFullkey.IV;
     }
 
     public static string GetDataDecrypt(string data)
     {
         AESEncryptedText aes = new AESEncryptedText();
         
-        string[] decrypted = data.Split(IV_SYMBOL);
+        string[] decrypted = data.Split(AESEncryption.IV_SYMBOL);
         
         aes.EncryptedText = decrypted[0];
         aes.IV = decrypted[1];

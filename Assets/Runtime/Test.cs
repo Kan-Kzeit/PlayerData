@@ -40,7 +40,7 @@ public class Test : MonoBehaviour
 
         //PlayerPrefsUtility.Clear();
 
-        //PlayerPrefsUtility.Save(jsonData, profile1);
+        PlayerPrefsUtility.Save(jsonData, profile1, true);
         //PlayerPrefsUtility.Save(jsonData2, profile2);
         //PlayerPrefsUtility.Save(jsonData3, profile3);
         //PlayerData.Save(jsonData3, profile1);
@@ -48,11 +48,15 @@ public class Test : MonoBehaviour
         //string dataProfile2 = PlayerPrefsUtility.Load(profile2);
         //string dataProfile3 = PlayerPrefsUtility.Load(profile3);
 
-        PlayerData.SetString("some-string", "I'm Nico", profile1);
+        //PlayerData.SetString("some-string", "I'm Nico", profile1);
+        Debug.Log(PlayerData.GetInt("age", profile1));
+        Debug.Log(PlayerData.GetFloat("asvg", profile1));
+        PlayerData.SetString("somse-string", "newString", profile1);
+
         Debug.Log(PlayerData.GetString("some-string", profile1));
         //Debug.Log(dataProfile2);
         //Debug.Log(dataProfile3);
 
-        
+
     }
 }
