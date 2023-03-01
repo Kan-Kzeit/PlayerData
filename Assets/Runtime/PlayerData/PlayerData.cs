@@ -170,10 +170,7 @@ public class PlayerData
             Debug.LogWarning("Invalid Profile Name!");
             return;
         }
-        if (_localStoreData.ContainsKey(profileName))
-        {
 
-        }
         string jsonData = Load(profileName);
 
         Dictionary<string, object> data;
